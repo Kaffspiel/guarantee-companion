@@ -8,8 +8,10 @@ import {
   Bell,
   User,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/app/hooks/useAuth";
 
 const menuItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
