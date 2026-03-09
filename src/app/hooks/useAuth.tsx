@@ -46,21 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Listen BEFORE getSession
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchUserData(session.user.id);
-        } else {
-          setProfile(null);
-          setRole(null);
-        }
-        setLoading(false);
-      }
-    );
-
+    // getSession first to restore session from storage
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -70,6 +56,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     });
+
+    // onAuthStateChange handles subsequent sign in/out events
+    // IMPORTANT: never await inside this callback — causes deadlocks
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          // Defer to avoid blocking the auth state change event queue
+          setTimeout(() => {
+            fetchUserData(session.user.id).finally(() => setLoading(false));
+          }, 0);
+        } else {
+          setProfile(null);
+          setRole(null);
+          setLoading(false);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
